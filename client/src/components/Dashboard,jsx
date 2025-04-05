@@ -1,0 +1,13 @@
+import React from 'react';
+import ExpenseTable from '../pages/ExpenseTable';
+
+const Dashboard = () => {
+  return (
+    <div className="p-6">
+      <h2 className="text-xl font-semibold mb-4">Dashboard</h2>
+      <ExpenseTable />
+    </div>
+  );
+};
+
+export default Dashboard;
