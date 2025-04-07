@@ -1,217 +1,150 @@
-// ExpenseTable.jsx
-// React table with editable inputs, dropdowns, and date pickers
+// ExpenseTable.jsx — Excel-style Table with Add, Delete, Totals, Edit
 
-import { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import React, { useState } from 'react';
-import { useReactTable, getCoreRowModel } from '@tanstack/react-table';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 
 const categoryOptions = ['Utilities', 'Marketing', 'Travel', 'Meals', 'Software'];
 
-const EditableInput = ({ value: initialValue, onUpdate }) => {
-  const [value, setValue] = useState(initialValue);
-  return (
-    <input
-      className="border rounded p-1 w-full"
-      value={value}
-      onChange={(e) => setValue(e.target.value)}
-      onBlur={() => onUpdate(value)}
-    />
-  );
-};
+const EditableInput = ({ value, onChange }) => (
+  <input
+    className="border rounded p-1 w-full"
+    value={value}
+    onChange={(e) => onChange(e.target.value)}
+  />
+);
 
-const EditableDropdown = ({ value: initialValue, onUpdate, options }) => {
-  const [value, setValue] = useState(initialValue);
-  return (
-    <select
-      className="border rounded p-1 w-full"
-      value={value}
-      onChange={(e) => {
-        setValue(e.target.value);
-        onUpdate(e.target.value);
-      }}
-    >
-      <option value="">Select</option>
-      {options.map((opt) => (
-        <option key={opt} value={opt}>{opt}</option>
-      ))}
-    </select>
-  );
-};
+const EditableDropdown = ({ value, onChange, options }) => (
+  <select
+    className="border rounded p-1 w-full"
+    value={value}
+    onChange={(e) => onChange(e.target.value)}
+  >
+    <option value="">Select</option>
+    {options.map((opt) => (
+      <option key={opt} value={opt}>{opt}</option>
+    ))}
+  </select>
+);
 
-const EditableDate = ({ value: initialValue, onUpdate }) => {
-  const [value, setValue] = useState(new Date(initialValue));
-  return (
-    <DatePicker
-      selected={value}
-      onChange={(date) => {
-        setValue(date);
-        onUpdate(date);
-      }}
-      className="border rounded p-1 w-full"
-    />
-  );
-};
-
-const defaultData = [
-  {
-    category: '',
-    business: '',
-    amount: '',
-    merchant: '',
-    date: new Date(),
-    connectedBusiness: '',
-    bankAccount: '',
-    comments: '',
-  },
-];
+const EditableDate = ({ value, onChange }) => (
+  <DatePicker
+    className="border rounded p-1 w-full"
+    selected={value ? new Date(value) : null}
+    onChange={(date) => onChange(date)}
+    dateFormat="yyyy-MM-dd"
+  />
+);
 
 export default function ExpenseTable() {
-  const [data, setData] = useState([]]);
+  const [data, setData] = useState([]);
+
   useEffect(() => {
     axios.get('/api/transactions')
-      .then((res) => {
-        setData(res.data);
-      })
-      .catch((err) => {
-        console.error('Error fetching transactions:', err);
-      });
-  }, []); 
+      .then((res) => setData(res.data))
+      .catch((err) => console.error('Error fetching transactions:', err));
+  }, []);
 
-  const updateData = async (rowIndex, columnId, value) => {
-    const row = data[rowIndex];
-    const updatedRow = { ...row, [columnId]: value };
-    const id = row._id; // make sure this comes from the backend
-  
-    // Update UI optimistically
-    setData((old) =>
-      old.map((r, index) => (index === rowIndex ? updatedRow : r))
-    );
-  
+  const updateCell = async (rowIndex, key, value) => {
+    const updated = [...data];
+    updated[rowIndex][key] = value;
+    setData(updated);
     try {
-      await axios.put(`/api/transactions/${id}`, { [columnId]: value });
+      const id = updated[rowIndex]._id;
+      await axios.put(`/api/transactions/${id}`, { [key]: value });
     } catch (err) {
-      console.error('Failed to update transaction:', err);
-      // Optional: revert UI on failure
+      console.error('Failed to update:', err);
     }
   };
 
-  const columns = [
-    {
-      accessorKey: 'category',
-      header: 'Category',
-      cell: ({ getValue, row, column, table }) => (
-        <EditableDropdown
-          value={getValue()}
-          onUpdate={(val) => updateData(row.index, column.id, val)}
-          options={categoryOptions}
-        />
-      ),
-    },
-    {
-      accessorKey: 'business',
-      header: 'Business',
-      cell: ({ getValue, row, column }) => (
-        <EditableInput
-          value={getValue()}
-          onUpdate={(val) => updateData(row.index, column.id, val)}
-        />
-      ),
-    },
-    {
-      accessorKey: 'amount',
-      header: 'Amount',
-      cell: ({ getValue, row, column }) => (
-        <EditableInput
-          value={getValue()}
-          onUpdate={(val) => updateData(row.index, column.id, val)}
-        />
-      ),
-    },
-    {
-      accessorKey: 'merchant',
-      header: 'Merchant',
-      cell: ({ getValue, row, column }) => (
-        <EditableInput
-          value={getValue()}
-          onUpdate={(val) => updateData(row.index, column.id, val)}
-        />
-      ),
-    },
-    {
-      accessorKey: 'date',
-      header: 'Date',
-      cell: ({ getValue, row, column }) => (
-        <EditableDate
-          value={getValue()}
-          onUpdate={(val) => updateData(row.index, column.id, val)}
-        />
-      ),
-    },
-    {
-      accessorKey: 'connectedBusiness',
-      header: 'Connected Business',
-      cell: ({ getValue, row, column }) => (
-        <EditableInput
-          value={getValue()}
-          onUpdate={(val) => updateData(row.index, column.id, val)}
-        />
-      ),
-    },
-    {
-      accessorKey: 'bankAccount',
-      header: 'Bank Account',
-      cell: ({ getValue, row, column }) => (
-        <EditableInput
-          value={getValue()}
-          onUpdate={(val) => updateData(row.index, column.id, val)}
-        />
-      ),
-    },
-    {
-      accessorKey: 'comments',
-      header: 'Comments',
-      cell: ({ getValue, row, column }) => (
-        <EditableInput
-          value={getValue()}
-          onUpdate={(val) => updateData(row.index, column.id, val)}
-        />
-      ),
-    },
-  ];
+  const addRow = async () => {
+    const newRow = {
+      category: '',
+      business: '',
+      amount: 0,
+      merchant: '',
+      date: new Date(),
+      connectedBusiness: '',
+      bankAccount: '',
+      comments: ''
+    };
+    try {
+      const res = await axios.post('/api/transactions', newRow);
+      setData((prev) => [...prev, res.data]);
+    } catch (err) {
+      console.error('Failed to add row:', err);
+    }
+  };
 
-  const table = useReactTable({
-    data,
-    columns,
-    getCoreRowModel: getCoreRowModel(),
-  });
+  const deleteRow = async (id) => {
+    try {
+      await axios.delete(`/api/transactions/${id}`);
+      setData((prev) => prev.filter((row) => row._id !== id));
+    } catch (err) {
+      console.error('Failed to delete row:', err);
+    }
+  };
+
+  const totalAmount = data.reduce((sum, row) => sum + (parseFloat(row.amount) || 0), 0).toFixed(2);
 
   return (
     <div className="p-4">
+      <div className="flex justify-between mb-4 items-center">
+        <h1 className="text-2xl font-bold">📊 Transactions</h1>
+        <button onClick={addRow} className="bg-blue-500 text-white px-3 py-1 rounded">+ Add Row</button>
+      </div>
       <table className="w-full border">
         <thead>
-          {table.getHeaderGroups().map((hg) => (
-            <tr key={hg.id}>
-              {hg.headers.map((header) => (
-                <th key={header.id} className="p-2 border bg-gray-100">
-                  {header.column.columnDef.header}
-                </th>
-              ))}
-            </tr>
-          ))}
+          <tr className="bg-gray-100">
+            <th className="border p-2">Category</th>
+            <th className="border p-2">Business</th>
+            <th className="border p-2">Amount</th>
+            <th className="border p-2">Merchant</th>
+            <th className="border p-2">Date</th>
+            <th className="border p-2">Connected Business</th>
+            <th className="border p-2">Bank Account</th>
+            <th className="border p-2">Comments</th>
+            <th className="border p-2">Actions</th>
+          </tr>
         </thead>
         <tbody>
-          {table.getRowModel().rows.map((row) => (
-            <tr key={row.id}>
-              {row.getVisibleCells().map((cell) => (
-                <td key={cell.id} className="p-2 border">
-                  {cell.renderCell()}
-                </td>
-              ))}
+          {data.map((row, i) => (
+            <tr key={row._id}>
+              <td className="border p-2">
+                <EditableDropdown value={row.category} onChange={(val) => updateCell(i, 'category', val)} options={categoryOptions} />
+              </td>
+              <td className="border p-2">
+                <EditableInput value={row.business} onChange={(val) => updateCell(i, 'business', val)} />
+              </td>
+              <td className="border p-2">
+                <EditableInput value={row.amount} onChange={(val) => updateCell(i, 'amount', parseFloat(val))} />
+              </td>
+              <td className="border p-2">
+                <EditableInput value={row.merchant} onChange={(val) => updateCell(i, 'merchant', val)} />
+              </td>
+              <td className="border p-2">
+                <EditableDate value={row.date} onChange={(val) => updateCell(i, 'date', val)} />
+              </td>
+              <td className="border p-2">
+                <EditableInput value={row.connectedBusiness} onChange={(val) => updateCell(i, 'connectedBusiness', val)} />
+              </td>
+              <td className="border p-2">
+                <EditableInput value={row.bankAccount} onChange={(val) => updateCell(i, 'bankAccount', val)} />
+              </td>
+              <td className="border p-2">
+                <EditableInput value={row.comments} onChange={(val) => updateCell(i, 'comments', val)} />
+              </td>
+              <td className="border p-2 text-center">
+                <button onClick={() => deleteRow(row._id)} className="text-red-600">🗑</button>
+              </td>
             </tr>
           ))}
+          <tr className="bg-gray-200 font-semibold">
+            <td colSpan="2" className="p-2 border text-right">Total</td>
+            <td className="p-2 border">${totalAmount}</td>
+            <td colSpan="6" className="border"></td>
+          </tr>
         </tbody>
       </table>
     </div>
