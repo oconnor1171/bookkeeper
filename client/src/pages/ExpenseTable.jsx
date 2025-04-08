@@ -42,8 +42,13 @@ export default function ExpenseTable() {
 
   useEffect(() => {
     axios.get('/api/transactions')
-      .then((res) => setData(res.data))
-      .catch((err) => console.error('Error fetching transactions:', err));
+      .then((res) => {
+        console.log('✅ Transactions fetched:', res.data);  // ← ADD THIS
+        setData(res.data);
+      })
+      .catch((err) => {
+        console.error('❌ Error fetching transactions:', err);
+      });
   }, []);
 
   const updateCell = async (rowIndex, key, value) => {
